@@ -57,7 +57,7 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
     private static final String SAMPLE = "FREE_SAMPLE";
     private final Random random = new Random();
 
-    private final SAMFileHeader header;
+    private SAMFileHeader header;
     private final Collection<SAMRecord> records;
 
     private int readLength = 36 ;
@@ -65,7 +65,7 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
     private SAMProgramRecord programRecord = null;
     private SAMReadGroupRecord readGroup = null;
 
-    private static final int DEFAULT_CHROMOSOME_LENGTH = 100000000;
+    private static final int DEFAULT_CHROMOSOME_LENGTH = 200000000;
 
     /**
      * Constructs a new SAMRecordSetBuilder with all the data needed to keep the records
@@ -154,6 +154,15 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
 
     /** Returns the accumulated list of sam records. */
     public Collection<SAMRecord> getRecords() { return this.records; }
+
+    public void setHeader(final SAMFileHeader header) {
+        this.header = header.clone();
+    }
+
+
+    public void addRecord(final SAMRecord record) {
+        this.records.add(record);
+    }
 
     /** Returns a CloseableIterator over the collection of SAMRecords. */
     public CloseableIterator<SAMRecord> iterator() {
