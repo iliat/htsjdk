@@ -26,6 +26,7 @@ package htsjdk.samtools;
 import htsjdk.samtools.util.CloseableIterator;
 import htsjdk.samtools.util.CoordMath;
 import htsjdk.samtools.util.RuntimeIOException;
+import htsjdk.samtools.DuplicateScoringStrategy.ScoringStrategy;
 
 import java.io.File;
 import java.io.IOException;
@@ -65,7 +66,10 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
     private SAMProgramRecord programRecord = null;
     private SAMReadGroupRecord readGroup = null;
 
-    private static final int DEFAULT_CHROMOSOME_LENGTH = 200000000;
+    public static final int DEFAULT_CHROMOSOME_LENGTH = 200000000;
+
+    public static final ScoringStrategy DEFAULTS_DUPLICATE_SCORING_STRATEGY = ScoringStrategy.TOTAL_MAPPED_REFERENCE_LENGTH;
+    private final ScoringStrategy duplicateScoringStrategy;
 
     /**
      * Constructs a new SAMRecordSetBuilder with all the data needed to keep the records
@@ -90,6 +94,11 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
     }
 
     public SAMRecordSetBuilder(final boolean sortForMe, final SAMFileHeader.SortOrder sortOrder, final boolean addReadGroup, final int defaultChromosomeLength) {
+        this(sortForMe, sortOrder, addReadGroup, defaultChromosomeLength, DEFAULTS_DUPLICATE_SCORING_STRATEGY);
+    }
+
+    public SAMRecordSetBuilder(final boolean sortForMe, final SAMFileHeader.SortOrder sortOrder, final boolean addReadGroup,
+                               final int defaultChromosomeLength, final ScoringStrategy duplicateScoringStrategy) {
         final List<SAMSequenceRecord> sequences = new ArrayList<SAMSequenceRecord>();
         for (final String chrom : chroms) {
             final SAMSequenceRecord sequenceRecord = new SAMSequenceRecord(chrom, defaultChromosomeLength);
@@ -110,6 +119,8 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
         } else {
             this.records = new ArrayList<SAMRecord>();
         }
+
+        this.duplicateScoringStrategy = duplicateScoringStrategy;
 
         if (addReadGroup) {
             final SAMReadGroupRecord readGroupRecord = new SAMReadGroupRecord(READ_GROUP_ID);
@@ -160,7 +171,15 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
     }
 
 
+    /** The record should already have the DS and MC tags computed */
     public void addRecord(final SAMRecord record) {
+        if (record.getReadPairedFlag() && !record.getMateUnmappedFlag() &&
+                null == record.getAttribute(SAMTagUtil.getSingleton().MC)) {
+            throw new SAMException("Mate Cigar tag (MC) not found in: " + record.getReadName());
+        }
+        if (null == record.getAttribute(SAMTagUtil.getSingleton().DS)) {
+            throw new SAMException("Duplicate score tag (DS) not found in: " + record.getReadName());
+        }
         this.records.add(record);
     }
 
@@ -247,6 +266,7 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
                                              final int defaultQuality, final boolean isSecondary) throws SAMException {
         final htsjdk.samtools.SAMRecord rec = createReadNoFlag(name, contig, start, negativeStrand, recordUnmapped, cigar, qualityString, defaultQuality);
         if (isSecondary) rec.setNotPrimaryAlignmentFlag(true);
+        DuplicateScoringStrategy.setDuplicateScore(rec, duplicateScoringStrategy);
         this.records.add(rec);
         return rec;
     }
@@ -346,6 +366,8 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
         }
         fillInBasesAndQualities(end2);
 
+        DuplicateScoringStrategy.setDuplicateScore(end1, end2, duplicateScoringStrategy);
+
         this.records.add(end1);
         this.records.add(end2);
     }
@@ -378,6 +400,7 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
 
         // set mate info
         SamPairUtil.setMateInfo(end1, end2, header, true);
+        DuplicateScoringStrategy.setDuplicateScore(end1, end2, duplicateScoringStrategy);
 
         recordsList.add(end1);
         recordsList.add(end2);
@@ -421,6 +444,8 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
             end2.setAttribute(SAMTag.PG.name(), programRecord.getProgramGroupId());
         }
         fillInBasesAndQualities(end2);
+
+        DuplicateScoringStrategy.setDuplicateScore(end1, end2, duplicateScoringStrategy);
 
         this.records.add(end1);
         this.records.add(end2);
