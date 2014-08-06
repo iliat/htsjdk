@@ -82,7 +82,11 @@ public class DuplicateScoringStrategy {
         if (rec1.getReadPairedFlag() != rec2.getReadPairedFlag()) return rec1.getReadPairedFlag() ? 1 : -1;
 
         // Get the primary duplicate score
-        cmp = (Integer)rec1.getAttribute(SAMTagUtil.getSingleton().DS) - (Integer)rec2.getAttribute(SAMTagUtil.getSingleton().DS);
+        Integer duplicateScore1 = (Integer)rec1.getAttribute(SAMTagUtil.getSingleton().DS);
+        if (null == duplicateScore1) throw new SAMException("DS tag not found for: " + rec1.getReadName());
+        Integer duplicateScore2 = (Integer)rec2.getAttribute(SAMTagUtil.getSingleton().DS);
+        if (null == duplicateScore2) throw new SAMException("DS tag not found for: " + rec2.getReadName());
+        cmp = duplicateScore1 - duplicateScore2;
 
         // Get the mapping quality
         // NB: must have the mate's mapping quality too!
