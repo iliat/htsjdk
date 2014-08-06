@@ -376,14 +376,14 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
      * Adds a pair of records (mapped or unmmapped) to the set using the provided contig starts.
      * The pair is assumed to be a well formed pair sitting on a single contig.
      */
-    public List<SAMRecord> addPair(final String name, final int contig, final int start1, final int start2,
+    public List<SAMRecord> addPair(final String name, final int contig1, final int contig2, final int start1, final int start2,
                                    final boolean record1Unmapped, final boolean record2Unmapped, final String cigar1,
                                    final String cigar2, final boolean strand1, final boolean strand2, final boolean record1NonPrimary,
                                    final boolean record2NonPrimary, final int defaultQuality) {
         final List<SAMRecord> recordsList = new LinkedList<SAMRecord>();
 
-        final SAMRecord end1 = createReadNoFlag(name, contig, start1, strand1, record1Unmapped, cigar1, null, defaultQuality);
-        final SAMRecord end2 = createReadNoFlag(name, contig, start2, strand2, record2Unmapped, cigar2, null, defaultQuality);
+        final SAMRecord end1 = createReadNoFlag(name, contig1, start1, strand1, record1Unmapped, cigar1, null, defaultQuality);
+        final SAMRecord end2 = createReadNoFlag(name, contig2, start2, strand2, record2Unmapped, cigar2, null, defaultQuality);
 
         end1.setReadPairedFlag(true);
         end1.setFirstOfPairFlag(true);
@@ -409,6 +409,18 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
         records.add(end2);
 
         return recordsList;
+    }
+
+    /**
+     * Adds a pair of records (mapped or unmmapped) to the set using the provided contig starts.
+     * The pair is assumed to be a well formed pair sitting on a single contig.
+     */
+    public List<SAMRecord> addPair(final String name, final int contig, final int start1, final int start2,
+                                   final boolean record1Unmapped, final boolean record2Unmapped, final String cigar1,
+                                   final String cigar2, final boolean strand1, final boolean strand2, final boolean record1NonPrimary,
+                                   final boolean record2NonPrimary, final int defaultQuality) {
+        return addPair(name, contig, contig, start1, start2, record1Unmapped, record2Unmapped, cigar1, cigar2, strand1, strand2,
+                record1NonPrimary, record2NonPrimary, defaultQuality);
     }
 
     /**
