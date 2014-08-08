@@ -61,7 +61,7 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
     private SAMFileHeader header;
     private final Collection<SAMRecord> records;
 
-    private int readLength = 36 ;
+    private int readLength = 36;
 
     private SAMProgramRecord programRecord = null;
     private SAMReadGroupRecord readGroup = null;
@@ -69,7 +69,6 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
     public static final int DEFAULT_CHROMOSOME_LENGTH = 200000000;
 
     public static final ScoringStrategy DEFAULTS_DUPLICATE_SCORING_STRATEGY = ScoringStrategy.TOTAL_MAPPED_REFERENCE_LENGTH;
-    private final ScoringStrategy duplicateScoringStrategy;
 
     /**
      * Constructs a new SAMRecordSetBuilder with all the data needed to keep the records
@@ -119,8 +118,6 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
         } else {
             this.records = new ArrayList<SAMRecord>();
         }
-
-        this.duplicateScoringStrategy = duplicateScoringStrategy;
 
         if (addReadGroup) {
             final SAMReadGroupRecord readGroupRecord = new SAMReadGroupRecord(READ_GROUP_ID);
@@ -177,9 +174,6 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
                 null == record.getAttribute(SAMTagUtil.getSingleton().MC)) {
             throw new SAMException("Mate Cigar tag (MC) not found in: " + record.getReadName());
         }
-        if (null == record.getAttribute(SAMTagUtil.getSingleton().DS)) {
-            throw new SAMException("Duplicate score tag (DS) not found in: " + record.getReadName());
-        }
         this.records.add(record);
     }
 
@@ -216,7 +210,6 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
             rec.setReadNegativeStrandFlag(negativeStrand);
             if (null != cigar) {
                 rec.setCigarString(cigar);
-                readLength = rec.getCigar().getReadLength();
             } else if (!rec.getReadUnmappedFlag()) {
                 rec.setCigarString(readLength + "M");
             }
@@ -266,7 +259,6 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
                                              final int defaultQuality, final boolean isSecondary) throws SAMException {
         final htsjdk.samtools.SAMRecord rec = createReadNoFlag(name, contig, start, negativeStrand, recordUnmapped, cigar, qualityString, defaultQuality);
         if (isSecondary) rec.setNotPrimaryAlignmentFlag(true);
-        DuplicateScoringStrategy.setDuplicateScore(rec, duplicateScoringStrategy);
         this.records.add(rec);
         return rec;
     }
@@ -366,8 +358,6 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
         }
         fillInBasesAndQualities(end2);
 
-        DuplicateScoringStrategy.setDuplicateScore(end1, end2, duplicateScoringStrategy);
-
         this.records.add(end1);
         this.records.add(end2);
     }
@@ -400,7 +390,6 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
 
         // set mate info
         SamPairUtil.setMateInfo(end1, end2, header, true);
-        DuplicateScoringStrategy.setDuplicateScore(end1, end2, duplicateScoringStrategy);
 
         recordsList.add(end1);
         recordsList.add(end2);
@@ -456,8 +445,6 @@ public class SAMRecordSetBuilder implements Iterable<SAMRecord> {
             end2.setAttribute(SAMTag.PG.name(), programRecord.getProgramGroupId());
         }
         fillInBasesAndQualities(end2);
-
-        DuplicateScoringStrategy.setDuplicateScore(end1, end2, duplicateScoringStrategy);
 
         this.records.add(end1);
         this.records.add(end2);
